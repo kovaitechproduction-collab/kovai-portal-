@@ -428,11 +428,11 @@ const HEAD=["S.No","PO No","PO Date","Unit","Party","Drawing No","Rev","Descript
 const sh=(name,l)=>({name,head:HEAD,w:[6,14,12,9,16,24,7,28,10,11,10,7,13,12,10,24,24],rows:l.map((r,i)=>{const c=calc(r);return[i+1,r.po,fmt(r.pod),r.unit||"",r.party,r.drg,r.rev||"",r.desc,num(r.qty),num(r.dis),c.bal,c.days,recv(r)?(r.rmd?fmtDM(r.rmd):"Received"):"Not received",stl(r),PRI[r.pri]||"",r.inv,r.rem]})});
 const shL=(name,l)=>({name,head:["S.No","Priority","PO No","Party","Drawing No","Description","Qty","Balance","Status","Note"],w:[6,10,14,16,22,26,9,9,14,24],rows:l.map((r,i)=>[i+1,PRI[r.pri]||"-",r.po,r.party,r.drg,r.desc,num(r.qty),calc(r).bal,stl(r),r.rem])});
 const pendL=()=>rows.filter(r=>!calc(r).done);
-const lpSheet=(name,bl,blue,L)=>{const g=[],mg=[],rh=[],C=(v,st)=>({v,s:st}),W=[8,26,10,10,16],ti=blue?12:5,bn=blue?13:8,hd=blue?14:9;
-g.push([C("LOAD PLAN",ti),C("",ti),C("",ti),C("DATE",6),C(fmt(today()),7)]);mg.push("A1:C1");rh.push(26);
-bl.forEach(([nm,l])=>{const r0=g.length+1;g.push([C(nm,bn),C("",bn),C("",bn),C("",bn),C("",bn)]);mg.push("A"+r0+":E"+r0);rh.push(22);g.push(["S.NO","DRG NO","REV","QTY","Priority"].map(v=>C(v,hd)));rh.push(22);
-l.forEach((r,i)=>{const u=!!r.urg,st=u?11:10,p=(u?"URGENT":"")+(u&&PRI[r.pri]?" - ":"")+(PRI[r.pri]||""),row=[i+1,r.drg||"",r.rev||"",num(r.qty)||"",p];row.forEach((v,c)=>{W[c]=Math.max(W[c],Math.ceil(String(v).length*1.3)+4)});g.push(row.map(v=>C(v,st)));rh.push(22)});
-for(let i=l.length;i<3;i++){g.push([0,0,0,0,0].map(()=>C("",10)));rh.push(22)}});
+const lpSheet=(name,bl,blue,L,ws)=>{const g=[],mg=[],rh=[],C=(v,st)=>({v,s:st}),W=ws?[8,26,10,10,16,16]:[8,26,10,10,16],NC=ws?6:5,EC=ws?"F":"E",ti=blue?12:5,bn=blue?13:8,hd=blue?14:9;
+g.push([C("LOAD PLAN",ti),C("",ti),C("",ti),...(ws?[C("",ti)]:[]),C("DATE",6),C(fmt(today()),7)]);mg.push("A1:C1");rh.push(26);
+bl.forEach(([nm,l])=>{const r0=g.length+1;g.push(Array.from({length:NC},(_,k)=>C(k?"":nm,bn)));mg.push("A"+r0+":"+EC+r0);rh.push(22);g.push((ws?["S.NO","DRG NO","REV","QTY","STATUS","Priority"]:["S.NO","DRG NO","REV","QTY","Priority"]).map(v=>C(v,hd)));rh.push(22);
+l.forEach((r,i)=>{const u=!!r.urg,st=u?11:10,p=(u?"URGENT":"")+(u&&PRI[r.pri]?" - ":"")+(PRI[r.pri]||""),row=ws?[i+1,r.drg||"",r.rev||"",num(r.qty)||"",stl(r),p]:[i+1,r.drg||"",r.rev||"",num(r.qty)||"",p];row.forEach((v,c)=>{W[c]=Math.max(W[c],Math.ceil(String(v).length*1.3)+4)});g.push(row.map(v=>C(v,st)));rh.push(22)});
+for(let i=l.length;i<3;i++){g.push(Array.from({length:NC},()=>C("",10)));rh.push(22)}});
 return{name,cols:W,grid:g,merges:mg,rh,rows:L,zoom:90,fit:1}};
 const rlSheet=L=>{const g=[],mg=[],rh=[],C=(v,st)=>({v,s:st}),W=[8,16,26,8,10,16],uk=r=>String(r.unit||"").trim().toUpperCase().replace(/[\s_-]*UNIT$/,"").trim(),
 ex=[...new Set(L.map(uk).filter(k=>k&&!["C","G","D"].includes(k)))].sort(),bl=[...["C","G","D",...ex].map(k=>[k+" UNIT",L.filter(r=>uk(r)===k)])],nu=L.filter(r=>!uk(r));if(nu.length)bl.push(["UNIT NOT SET",nu]);
@@ -445,7 +445,7 @@ function rep(k){let s;if(k==="load"){const L=pendL().filter(r=>LDST.includes(r.s
 else if(k==="tc")s=[{name:"TC",head:["S.No","DRG No","Qty"],w:[6,26,10],rows:pendL().filter(r=>r.stg==="TC").map((r,i)=>[i+1,r.drg,num(r.qty)])}];
 else if(k==="vmc"){const L=pendL().filter(r=>r.stg==="VMC").sort(vmcCmp);s=[lpSheet("VMC",[["VMC",L]],1,L)]}
 else if(k==="urgent"){const L=pendL().filter(r=>r.urg).sort(prCmp);s=[{name:"Urgent Items",head:["PO No","Drawing No","Qty","Process","Status"],w:[16,26,10,16,22],rows:L.map(r=>[r.po,r.drg,num(r.qty),stl(r),r.ust||""])}]}
-else if(k==="mplan"){const L=pendL().filter(mpIn).sort(mcCmp),bl=MACH.map(m=>[m,L.filter(r=>r.mac===m)]),un=L.filter(r=>!MACH.includes(r.mac));if(un.length)bl.push(["MACHINE NOT SET",un]);s=[lpSheet("Machine Load Plan",bl,0,L)]}
+else if(k==="mplan"){const L=pendL().filter(mpIn).sort(mcCmp),bl=MACH.map(m=>[m,L.filter(r=>r.mac===m)]),un=L.filter(r=>!MACH.includes(r.mac));if(un.length)bl.push(["MACHINE NOT SET",un]);s=[lpSheet("Machine Load Plan",bl,0,L,1)]}
 else s=[sh("All Orders",rows)];
 if(!s.some(x=>x.rows.length)){alert("No data to download");return}xlsx(s,{load:"Load_Plan_Priority",ready:"Ready_List",all:"All_Orders",urgent:"Urgent_Items",tc:"TC_1st_off_done",mplan:"Machine_Load_Plan",vmc:"VMC_Load_Plan"}[k]+"_"+today()+".xlsx")}
 /* ---------- views ---------- */
