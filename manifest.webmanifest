@@ -1,0 +1,15 @@
+{
+  "name": "Kovai Tech Production Portal",
+  "short_name": "Kovai Portal",
+  "description": "Production follow-up portal",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4ece1",
+  "theme_color": "#0c2257",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
